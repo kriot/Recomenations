@@ -6,7 +6,7 @@ release:
 	g++ --std=c++11 -g -O3 -o main main.cpp -Wall -Wno-sign-compare 
 
 check_headers:
-	g++ --std=c++11 -g -O3 -o main *.hpp -Wall -Wno-sign-compare 
+	g++ --std=c++11 -g -O3 -o main `ls *.hpp` -Wall -Wno-sign-compare 
 
 clean:
 	rm -f main

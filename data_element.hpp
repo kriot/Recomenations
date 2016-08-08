@@ -2,6 +2,6 @@
 
 struct DataElement {
 	UID uid;
-	PID pid;
+	IID iid;
 	R rating;
 };

@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include "recommender.hpp"
 #include "data.hpp"
 #include "recommender_trainer.hpp"
@@ -15,7 +16,7 @@ class RecommenderConjugateGradient: public RecommenderTrainer {
 
 		void Train() override; 
 
-		double RMSE() override; 
+		double RMSE(); 
 
 	private:
 		inline double RMSE_partial(int offset); 
@@ -27,7 +28,6 @@ class RecommenderConjugateGradient: public RecommenderTrainer {
 		double regularization_k;
 	private:
 		Data* data;
-		Shuffler shuffle;	
 		double mu;
 	private:
 		void EstimateMu(); 
