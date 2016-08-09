@@ -1,15 +1,26 @@
-all: main 
+CXX=g++
+#INCLUDEPATH=-I$(PROJECTPATH)/config_loader/ -I$(PROJECTPATH)/UbjsonCpp/include/ -I$(PROJECTPATH)
+#LIBRARYPATH=-L$(PROJECTPATH)/UbjsonCpp/src -L$(PROJECTPATH)/config_loader
+CXXFLAGS=--std=c++11 -g -D DEBUG -Wall -Wno-sign-compare $(INCLUDEPATH)
+LDFLAGS= $(LIBRARYPATH) 
+OBJECTS=main.o conjugate_gradient_trainer.cpp 
+EXECUTABLE=main
 
-main: main.cpp
-	g++ --std=c++11 -g -D DEBUG -o main main.cpp -Wall -Wno-sign-compare 
-release: 
-	g++ --std=c++11 -g -O3 -o main main.cpp -Wall -Wno-sign-compare 
+.PHONY: all clean check_headers gen_test big_test small_test
+
+all: $(EXECUTABLE)
+
+$(EXECUTABLE): $(OBJECTS)
+	$(CXX) $(OBJECTS) -o $(EXECUTABLE) $(LDFLAGS)
+
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) $< -o $@
+
+clean:
+	rm -f $(OBJECTS) $(EXECUTABLE)
 
 check_headers:
 	g++ --std=c++11 -g -O3 -o main `ls *.hpp` -Wall -Wno-sign-compare 
-
-clean:
-	rm -f main
 
 gen_test:
 	python test_gen.py
