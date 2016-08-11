@@ -5,6 +5,7 @@
 class RecommenderTrainer 
 {
 public:
+	RecommenderTrainer(Recommender* recommender);
 	Recommender* recommender;
 	virtual void Train() = 0;
 	virtual ~RecommenderTrainer() = 0;

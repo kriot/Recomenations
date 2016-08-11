@@ -5,6 +5,6 @@
 // analog of TrivialPairDataSet of old_main.cpp
 class Data {
 public:
-	std::vector<DataElement> Data;
+	std::vector<DataElement> data;
 	void AddData(UID uid, IID iid, R rating);
 };

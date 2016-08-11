@@ -1,9 +1,9 @@
 CXX=g++
 #INCLUDEPATH=-I$(PROJECTPATH)/config_loader/ -I$(PROJECTPATH)/UbjsonCpp/include/ -I$(PROJECTPATH)
 #LIBRARYPATH=-L$(PROJECTPATH)/UbjsonCpp/src -L$(PROJECTPATH)/config_loader
-CXXFLAGS=--std=c++11 -g -D DEBUG -Wall -Wno-sign-compare $(INCLUDEPATH)
+CXXFLAGS=--std=c++11 -c -g -D DEBUG -Wall -Wno-sign-compare $(INCLUDEPATH)
 LDFLAGS= $(LIBRARYPATH) 
-OBJECTS=main.o conjugate_gradient_trainer.cpp 
+OBJECTS=main.o conjugate_gradient_trainer.o data.o
 EXECUTABLE=main
 
 .PHONY: all clean check_headers gen_test big_test small_test

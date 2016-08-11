@@ -6,9 +6,7 @@
 
 // TODO: opt_parse
 int main() {
-
 	bool model_choosing = true;
-	bool testing = false;
 
 	long long k, U, M, D, T;
 	std::cin >> k >> U >> M >> D >> T;
@@ -37,7 +35,7 @@ int main() {
 			double rmse = trainer.RMSE();
 			std::cerr << "RMSE: " << rmse << "\n";
 			std::cerr << "done_iterations: " << trainer.done_iterations << "\n";
-			if (rmse < eps) { // overlearning
+			if (rmse < 0.001) { // overlearning
 				optimal_size = std::max(3, i - 1);
 				break;
 			}
@@ -45,8 +43,8 @@ int main() {
 	}
 	std::cerr << "optimal_size: " << optimal_size << "\n";
 
-	SVDRecommender recommender(U, M, optimal_size);
-	SVDRecommenderConjugateGradient trainer(&recommender, &dataset
+	Recommender recommender(U, M, optimal_size);
+	RecommenderConjugateGradient trainer(&recommender, &dataset
 		, 50000 /*timeup*/
 		, 0.002 /*lambda*/
 		, 0.0 /*regularization*/
