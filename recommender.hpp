@@ -5,8 +5,8 @@
 class Recommender {
 public:
 	Recommender(long long UsersSize, long long ItemsSize, long long Dimension);
-	int Dimension;
 	cv::Mat Users; // user is row
 	cv::Mat Items; // item is column
+	int Dimension;
 	R Predict(UID uid, IID iid);
 };

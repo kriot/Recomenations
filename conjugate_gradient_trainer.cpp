@@ -20,6 +20,10 @@ RecommenderConjugateGradient::RecommenderConjugateGradient(
 {
 }
 
+RecommenderConjugateGradient::~RecommenderConjugateGradient()
+{
+}
+
 R scalar_for_cv_mat(cv::Mat m1, cv::Mat m2) {
 	cv::Mat row_sum = cv::Mat::zeros(1, m1.cols, CV_R);
 	cv::reduce(m1.mul(m2), row_sum, 0, CV_REDUCE_SUM); // mul -- element-wise

@@ -13,6 +13,7 @@ class RecommenderConjugateGradient: public RecommenderTrainer {
 				, double lambda
 				, double regularization_k
 				, long long N = 1000);
+		~RecommenderConjugateGradient();
 
 		void Train() override; 
 
