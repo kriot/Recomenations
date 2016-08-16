@@ -45,7 +45,7 @@ int main() {
 
 	Recommender recommender(U, M, optimal_size);
 	RecommenderConjugateGradient trainer(&recommender, &dataset
-		, 50000 /*timeup*/
+		, 150000 /*timeup*/
 		, 0.0002 /*lambda*/
 		, 0.0 /*regularization*/
 		, 10000 * D);

@@ -48,7 +48,8 @@ void RecommenderConjugateGradient::Train() {
 	cv::Mat u0 = user_delta_x_prev.clone();
 	cv::Mat m0 = movie_delta_x_prev.clone();
 	for (int iteration = 0; iteration < N && std::chrono::system_clock::now() - beginning < timeup && rmse > 0.1; ++iteration) {
-		if (iteration % 1 == 0) {
+		std::cerr << "Iteration: " << iteration << "\n";
+		if (iteration % 10 == 0) {
 			std::cerr << "Iteration: " << iteration << "\n";
 			rmse = RMSE();
 			std::cerr << "RMSE: " << rmse << "\n";
