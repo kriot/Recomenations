@@ -8,3 +8,6 @@
  * [https://yadi.sk/d/2Emm2xkQ6HsnS](https://yadi.sk/d/2Emm2xkQ6HsnS) — статья про использование таксономии — связей между объектами.
  * [http://www.ra.ethz.ch/cdstore/www2010/www/p811.pdf](http://www.ra.ethz.ch/cdstore/www2010/www/p811.pdf) — неплохая статья, в которой используется простое тензорное разложение. Сейчас тензорными разложениями занимается Рома Халкечев.
  * [http://arxiv.org/pdf/1409.2944.pdf](http://arxiv.org/pdf/1409.2944.pdf) — относительно свежая статья про сочетание коллаборативной фильтрации с deep learning.
+ * [http://arxiv.org/pdf/1602.05352.pdf](http://arxiv.org/pdf/1602.05352.pdf) - Учет того, что пользователи смотрят, контент, который им нравится априорно
+ * [https://wiki.yandex-team.ru/recommender/archive/research/normalization](https://wiki.yandex-team.ru/recommender/archive/research/normalization)- Смещение оценки пользователя в соответствии с его распределением оценок и распределением оценок в среднем.
+
