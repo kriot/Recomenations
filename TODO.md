@@ -1,3 +1,4 @@
 # TODO list 
 
- * Add bias
+ * RMSE and noise covariance
+ * Fast work
