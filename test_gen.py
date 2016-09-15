@@ -33,6 +33,7 @@ k = 10
 sigma_gen = float(options.sigma_gen)
 
 noise = float(options.noise);
+print noise
 
 users = np.array([np.array([0.] * dim)] * U)
 items = np.array([np.array([0.] * dim)] * M)
@@ -55,13 +56,15 @@ with open("test.in", "w") as fin:
 	for _ in range(D):
 		u = random.randint(0, U - 1)
 		m = random.randint(0, M - 1)
-		r = np.inner(users[u], items[m]) + random.gauss(0., noise)
+                noise_error = random.gauss(0., noise)
+		r = np.inner(users[u], items[m]) + noise_error 
 		fin.write("{} {} {}\n" .format(u, m, r))
 	with open("test.out", "w") as fout:
 		for _ in range(T):
 			u = random.randint(0, U - 1)
 			m = random.randint(0, M - 1)
-			r = np.inner(users[u], items[m])
+                        noise_error = random.gauss(0., noise)
+			r = np.inner(users[u], items[m]) 
 			fin.write("{} {}\n".format(u, m))
 			fout.write("{}\n".format(r))
 

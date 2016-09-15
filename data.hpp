@@ -8,3 +8,9 @@ public:
 	std::vector<DataElement> data;
 	void AddData(UID uid, IID iid, R rating);
 };
+
+class DataSession {
+public:
+	std::vector<DataSessionElement> data;
+	void AddData(UID uid, ID session, IID iid, R rating);
+};

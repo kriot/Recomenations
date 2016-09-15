@@ -6,3 +6,4 @@ extern decltype(CV_64FC1) CV_R;
 
 using UID = int;
 using IID = int;
+using ID = int;

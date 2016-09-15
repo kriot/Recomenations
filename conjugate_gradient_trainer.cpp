@@ -43,11 +43,14 @@ void RecommenderConjugateGradient::Train() {
 	const int M = recommender->Items.cols;
 	const int dim = recommender->Dimension;
 
-	cv::Mat user_delta_x_prev(U, dim, CV_R);
-	cv::Mat movie_delta_x_prev(dim, M, CV_R);
+	int steps_per_iteration = 6;
+	bool disable_conjugate = false;
+
+	cv::Mat user_delta_x_prev = cv::Mat::zeros(U, dim, CV_R);
+	cv::Mat movie_delta_x_prev = cv::Mat::zeros(dim, M, CV_R);
 	cv::Mat u0 = user_delta_x_prev.clone();
 	cv::Mat m0 = movie_delta_x_prev.clone();
-	for (int iteration = 0; iteration < N && std::chrono::system_clock::now() - beginning < timeup && rmse > 0.1; ++iteration) {
+	for (int iteration = 0; iteration < N && std::chrono::system_clock::now() - beginning < timeup; ++iteration) {
 		std::cerr << "Iteration: " << iteration << "\n";
 		if (iteration % 10 == 0) {
 			std::cerr << "Iteration: " << iteration << "\n";
@@ -55,14 +58,18 @@ void RecommenderConjugateGradient::Train() {
 			std::cerr << "RMSE: " << rmse << "\n";
 		}
 
-		if (iteration % 2 == 0) { // # train u_id
+		if ((iteration / steps_per_iteration) % 2 == 0) { // # train u_id
+
+			// reset m0 after all iterations for mids
+			m0 = cv::Mat::zeros(dim, M, CV_R);
+
 			cv::Mat user_delta_x = cv::Mat::zeros(U, dim, CV_R);
 			// estimate gradient
 			for (const auto& d: data->data) {
 				int u = d.uid;
 				int m = d.iid;
 				int r = d.rating;
-				user_delta_x.row(u) += recommender->Items.col(m).t() * (r - recommender->Predict(u, m));
+				user_delta_x.row(u) += recommender->Items.col(m).t() * (r - recommender->Predict(u, m)) + regularization_k * recommender->Users.row(u);
 			}
 			// wtf ?
 			for(int u = 0; u < U; ++u) {
@@ -75,6 +82,9 @@ void RecommenderConjugateGradient::Train() {
 													user_delta_x_prev.dot(user_delta_x_prev);
 			beta_pr = 0;
 			double beta = std::max(0., beta_pr);
+			
+			if (disable_conjugate)
+				beta = 0;
 
 			// Update the conjugate direction (see article, step 3)
 			u0 = user_delta_x + (u0 * beta);
@@ -86,8 +96,8 @@ void RecommenderConjugateGradient::Train() {
 				int u = d.uid;
 				int m = d.iid;
 				int r = d.rating;
-				t_num += cv::Mat((r - recommender->Predict(u, m)) * (u0.row(u) * recommender->Items.col(m))).at<R>(0, 0);
-				t_den += std::pow(cv::Mat(u0.row(u) * recommender->Items.col(m)).at<R>(0, 0), 2); 
+				t_num += cv::Mat((r - recommender->Predict(u, m)) * (u0.row(u) * recommender->Items.col(m))).at<R>(0, 0) + regularization_k * cv::Mat(recommender->Users.row(u) * (u0.row(u).t())).at<R>(0, 0);
+				t_den += std::pow(cv::Mat(u0.row(u) * recommender->Items.col(m)).at<R>(0, 0), 2) + regularization_k * cv::Mat(u0.row(u) * (u0.row(u).t())).at<R>(0, 0); 
 			}
 			double t = t_num / t_den;
 			
@@ -97,13 +107,16 @@ void RecommenderConjugateGradient::Train() {
 			// save prev
 			user_delta_x_prev = user_delta_x;
 		} else { // # train m_id
+
+			// reset u0 after all iterations for uids
+			u0 = cv::Mat::zeros(U, dim, CV_R);
 			cv::Mat movie_delta_x = cv::Mat::zeros(dim, M, CV_R);
 			// estimate gradient
 			for (const auto& d: data->data) {
 				int u = d.uid;
 				int m = d.iid;
 				int r = d.rating;
-				movie_delta_x.col(m) += recommender->Users.row(u).t() * (r - recommender->Predict(u, m));
+				movie_delta_x.col(m) += recommender->Users.row(u).t() * (r - recommender->Predict(u, m)) + regularization_k * recommender->Items.col(m);
 			}
 
 			// wtf ?
@@ -118,6 +131,9 @@ void RecommenderConjugateGradient::Train() {
 			beta_pr = 0;
 			double beta = std::max(0., beta_pr);
 
+			if (disable_conjugate)
+				beta = 0;
+
 			// Update the conjugate direction (see article, step 3)
 			m0 = movie_delta_x + m0 * beta;
 
@@ -128,8 +144,8 @@ void RecommenderConjugateGradient::Train() {
 				int u = d.uid;
 				int m = d.iid;
 				int r = d.rating;
-				t_num += cv::Mat((r - recommender->Predict(u, m)) * (recommender->Users.row(u) * m0.col(m))).at<R>(0, 0);
-				t_den += std::pow(cv::Mat(recommender->Users.row(u) * m0.col(m)).at<R>(0, 0), 2); 
+				t_num += cv::Mat((r - recommender->Predict(u, m)) * (recommender->Users.row(u) * m0.col(m))).at<R>(0, 0) + regularization_k * cv::Mat(recommender->Items.col(m).t() * m0.col(m)).at<R>(0, 0);
+				t_den += std::pow(cv::Mat(recommender->Users.row(u) * m0.col(m)).at<R>(0, 0), 2) + regularization_k * cv::Mat(m0.col(m).t() * m0.col(m)).at<R>(0, 0); 
 			}
 			double t = t_num / t_den;
 
@@ -142,6 +158,7 @@ void RecommenderConjugateGradient::Train() {
 		// FixAll();
 		done_iterations = iteration + 1;
 	}
+//std::cerr << "Time: " << static_cast<int>(std::chrono::system_clock::now() - beginning) / 1000 << " sec.";
 }
 
 double RecommenderConjugateGradient::RMSE() {
