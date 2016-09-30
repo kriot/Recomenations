@@ -70,10 +70,10 @@ void run_user_item_model()
 
 void run_user_session_item_model()
 {
-	long long k, UsersSize, ItemsSize, TrainSize, TestSize;
-	std::cin >> k >> UsersSize >> ItemsSize >> TrainSize >> TestSize;
+	long long UsersSize, SessionsSize, ItemsSize, TrainSize, TestSize;
+	std::cin >> UsersSize >> SessionsSize >> ItemsSize >> TrainSize >> TestSize;
 	
-	DataSession dataset;
+	DataSession dataset(UsersSize, SessionsSize, ItemsSize);
 	for (int i = 0; i < TrainSize; ++i) {
 		int u, m, s;
 		double r;
@@ -106,5 +106,8 @@ void run_user_session_item_model()
 //		std::cout << recommender.users[u]  << "; " << recommender.items[m] << "\n";
 	}
 }
+
 int main() {
+	run_user_item_model();
+	// run_user_session_item_model();
 }

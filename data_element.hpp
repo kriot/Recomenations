@@ -8,7 +8,8 @@ struct DataElement {
 
 struct DataSessionElement {
 	ID uid;
-	ID iid;
 	ID session;
+	ID iid;
 	R rating;
+	DataElement interpret_like_user_item_data();
 };

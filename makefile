@@ -3,7 +3,7 @@ CXX=g++
 #LIBRARYPATH=-L$(PROJECTPATH)/UbjsonCpp/src -L$(PROJECTPATH)/config_loader
 CXXFLAGS=--std=c++11 -c -g -D DEBUG -Wall -Wno-sign-compare $(INCLUDEPATH)
 LDFLAGS=-lopencv_core $(LIBRARYPATH) 
-OBJECTS=main.o conjugate_gradient_trainer.o data.o recommender.o recommender_trainer.o defines.o recommender_session_normal_around_user.o
+OBJECTS=main.o conjugate_gradient_trainer.o data.o recommender.o recommender_trainer.o defines.o recommender_session_normal_around_user.o data_element.o
 EXECUTABLE=main
 
 .PHONY: all clean check_headers gen_test big_test small_test
@@ -24,6 +24,9 @@ check_headers:
 
 gen_test:
 	python test_gen.py
+
+gen_sessions_test:
+	python test_gen_with_sessions.py
 	
 big_test: main
 	./main < test.in > out.log

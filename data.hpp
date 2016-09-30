@@ -11,6 +11,11 @@ public:
 
 class DataSession {
 public:
+	DataSession(long long users, long long sessions, long long items);
 	std::vector<DataSessionElement> data;
 	void AddData(UID uid, ID session, IID iid, R rating);
+
+	long long users;
+	long long items;
+	long long sessions;
 };
