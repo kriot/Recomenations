@@ -89,7 +89,7 @@ void run_user_session_item_model()
 		, 100 * 60 * 1000 /*timeup*/
 		, 0.0002 /*lambda*/
 		, .01 /*regularization*/
-		, 30);
+		, 20);
 	trainer.Train();
 #ifdef DEBUG
 	double rmse = trainer.RMSE();
@@ -108,6 +108,6 @@ void run_user_session_item_model()
 }
 
 int main() {
-	run_user_item_model();
-	// run_user_session_item_model();
+	// run_user_item_model();
+	run_user_session_item_model();
 }
