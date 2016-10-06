@@ -42,13 +42,17 @@ void RecommenderSessionNormalAroundUser::Train() {
 	const int U = recommender->Users.rows;
 	const int M = recommender->Items.cols;
 	const int dim = recommender->Dimension;
+	const int S = data->sessions;
 
 	int steps_per_iteration = 6;
 	bool disable_conjugate = false;
 
-	cv::Mat user_delta_x_prev = cv::Mat::zeros(U, dim, CV_R);
+	cv::Mat session_delta_x_prev = cv::Mat::zeros(S, dim, CV_R);
+	cv::Mat sessions = cv::Mat::zeros(S, dim, CV_R);
+	cv::randn(sessions, 0, 1);
+
 	cv::Mat movie_delta_x_prev = cv::Mat::zeros(dim, M, CV_R);
-	cv::Mat u0 = user_delta_x_prev.clone();
+	cv::Mat u0 = session_delta_x_prev.clone();
 	cv::Mat m0 = movie_delta_x_prev.clone();
 	for (int iteration = 0; iteration < N && std::chrono::system_clock::now() - beginning < timeup; ++iteration) {
 		std::cerr << "Iteration: " << iteration << "\n";
@@ -58,28 +62,29 @@ void RecommenderSessionNormalAroundUser::Train() {
 			std::cerr << "RMSE: " << rmse << "\n";
 		}
 
-		if ((iteration / steps_per_iteration) % 2 == 0) { // # train u_id
+		if ((iteration / steps_per_iteration) % 2 == 0) { // # train s_id
 
 			// reset m0 after all iterations for mids
 			m0 = cv::Mat::zeros(dim, M, CV_R);
 
-			cv::Mat user_delta_x = cv::Mat::zeros(U, dim, CV_R);
+			cv::Mat session_delta_x = cv::Mat::zeros(U, dim, CV_R);
 			// estimate gradient
 			for (const auto& d: data->data) {
-				int u = d.uid;
-				int m = d.iid;
-				int r = d.rating;
-				user_delta_x.row(u) += recommender->Items.col(m).t() * (r - recommender->Predict(u, m)) + regularization_k * recommender->Users.row(u);
+				ID u = d.uid;
+				ID s = d.session;
+				ID m = d.iid;
+				double r = d.rating;
+				session_delta_x.row(u) += recommender->Items.col(m).t() * (r - sessions.row(s).dot(recommender->Items.col(m).t())) + regularization_k * (recommender->Users.row(u) + sessions.row(s));
 			}
-			// wtf ?
-			for(int u = 0; u < U; ++u) {
-				user_delta_x.at<R>(u, 0) = 0;
-				user_delta_x.at<R>(u, 1) = 0;
+			// reset
+			for(int s = 0; s < S; ++s) {
+				session_delta_x.at<R>(s, 0) = 0;
+				session_delta_x.at<R>(s, 1) = 0;
 			}
 
 			// estimate number for the method (see article)
-			double beta_pr = iteration < 2 ? 0 : user_delta_x.dot(user_delta_x - user_delta_x_prev) / 
-													user_delta_x_prev.dot(user_delta_x_prev);
+			double beta_pr = iteration < 2 ? 0 : session_delta_x.dot(session_delta_x - session_delta_x_prev) / 
+													session_delta_x_prev.dot(session_delta_x_prev);
 			beta_pr = 0;
 			double beta = std::max(0., beta_pr);
 			
@@ -87,7 +92,7 @@ void RecommenderSessionNormalAroundUser::Train() {
 				beta = 0;
 
 			// Update the conjugate direction (see article, step 3)
-			u0 = user_delta_x + (u0 * beta);
+			u0 = session_delta_x + (u0 * beta);
 
 			// optimize (step 4)
 			double t_num = 0;
@@ -95,17 +100,36 @@ void RecommenderSessionNormalAroundUser::Train() {
 			for (const auto& d: data->data) {
 				int u = d.uid;
 				int m = d.iid;
+				ID s = d.session;
 				int r = d.rating;
-				t_num += cv::Mat((r - recommender->Predict(u, m)) * (u0.row(u) * recommender->Items.col(m))).at<R>(0, 0) + regularization_k * cv::Mat(recommender->Users.row(u) * (u0.row(u).t())).at<R>(0, 0);
+				t_num += cv::Mat((r - sessions.row(s).dot(recommender->Items.col(m).t())) * (u0.row(u) * recommender->Items.col(m))).at<R>(0, 0) + regularization_k * cv::Mat((recommender->Users.row(u) + sessions.row(s)) * (u0.row(u).t())).at<R>(0, 0);
 				t_den += std::pow(cv::Mat(u0.row(u) * recommender->Items.col(m)).at<R>(0, 0), 2) + regularization_k * cv::Mat(u0.row(u) * (u0.row(u).t())).at<R>(0, 0); 
 			}
 			double t = t_num / t_den;
 			
 			// apply (step 5)
-			recommender->Users += u0 * t;
+			sessions += u0 * t;
 			
 			// save prev
-			user_delta_x_prev = user_delta_x;
+			session_delta_x_prev = session_delta_x;
+			
+			//fit users
+			std::vector<int> n(U, 0);
+			recommender->Users = cv::Mat::zeros(S, dim, CV_R);
+			for (const auto& d: data->data) {
+				ID u = d.uid;
+				ID s = d.session;
+				// ID m = d.iid;
+				recommender->Users.row(u) += sessions.row(s);
+				n[u] += 1;
+			}
+			for (const auto& d: data->data) {
+				ID u = d.uid;
+				// ID s = d.session;
+				// ID m = d.iid;
+				recommender->Users.row(u) /= n[u];
+				n[u] = 1;
+			}
 		} else { // # train m_id
 
 			// reset u0 after all iterations for uids
@@ -113,13 +137,14 @@ void RecommenderSessionNormalAroundUser::Train() {
 			cv::Mat movie_delta_x = cv::Mat::zeros(dim, M, CV_R);
 			// estimate gradient
 			for (const auto& d: data->data) {
-				int u = d.uid;
-				int m = d.iid;
-				int r = d.rating;
-				movie_delta_x.col(m) += recommender->Users.row(u).t() * (r - recommender->Predict(u, m)) + regularization_k * recommender->Items.col(m);
+				// ID u = d.uid;
+				ID s = d.session;
+				ID m = d.iid;
+				double r = d.rating;
+				movie_delta_x.col(m) += sessions.row(s).t() * (r - sessions.row(s).dot(recommender->Items.col(m).t())) + regularization_k * recommender->Items.col(m);
 			}
 
-			// wtf ?
+			// fixing for byes for items and common byes
 			for(int m = 0; m < M; ++m) {
 				movie_delta_x.at<R>(0, m) = 0;
 				movie_delta_x.at<R>(2, m) = 0;
@@ -141,11 +166,12 @@ void RecommenderSessionNormalAroundUser::Train() {
 			double t_num = 0;
 			double t_den = 0;
 			for (const auto& d: data->data) {
-				int u = d.uid;
+				// int u = d.uid;
+				ID s = d.session;
 				int m = d.iid;
 				int r = d.rating;
-				t_num += cv::Mat((r - recommender->Predict(u, m)) * (recommender->Users.row(u) * m0.col(m))).at<R>(0, 0) + regularization_k * cv::Mat(recommender->Items.col(m).t() * m0.col(m)).at<R>(0, 0);
-				t_den += std::pow(cv::Mat(recommender->Users.row(u) * m0.col(m)).at<R>(0, 0), 2) + regularization_k * cv::Mat(m0.col(m).t() * m0.col(m)).at<R>(0, 0); 
+				t_num += cv::Mat((r - sessions.row(s).dot(recommender->Items.col(m).t())) * (sessions.row(s) * m0.col(m))).at<R>(0, 0) + regularization_k * cv::Mat(recommender->Items.col(m).t() * m0.col(m)).at<R>(0, 0);
+				t_den += std::pow(cv::Mat(sessions.row(s) * m0.col(m)).at<R>(0, 0), 2) + regularization_k * cv::Mat(m0.col(m).t() * m0.col(m)).at<R>(0, 0); 
 			}
 			double t = t_num / t_den;
 
