@@ -28,9 +28,11 @@ parser.add_option('--noise',
 
 mu = float(options.mu)
 U = 16000
-sessions_per_user = 1
+sessions_per_user_max = 10
+sessions_per_user_min = 3
+
 M = 1000
-D = M * U / 5 / sessions_per_user
+D = M * U / 5 
 T = 3000
 dim = 10
 
@@ -43,19 +45,25 @@ noise = float(options.noise);
 print noise
 
 users = np.array([np.array([0.] * dim)] * U)
-sessions = np.array([np.array([0.] * dim)] * U * sessions_per_user)
+sessions = [ [np.array([0.] * dim) for _ in xrange(random.randint(sessions_per_user_min, sessions_per_user_max))] for _ in xrange(U)] # [uid][sid]
 items = np.array([np.array([0.] * dim)] * M)
 
-for user in users:
+# generate users and sessions
+
+S = 0
+for uid, user in enumerate(users):
 	user[0] = mu
 	user[1] = 1.
 	for i in range(2, dim):
 		user[i] = random.gauss(0., sigma_gen)
-        for sid in xrange(i * sessions_per_user, (i + 1) * sessions_per_user):
-            sessions[sid][0] = mu
-            sessions[sid][1] = 1.
+        for session in sessions[uid]:
+            S += 1
+            session[0] = mu
+            session[1] = 1.
             for i in range(2, dim):
-                sessions[sid][i] = random.gauss(user[i], sigma_session)
+                session[i] = random.gauss(user[i], sigma_session)
+
+# generate items
 
 for item in items:
 	item[0] = 1.
@@ -64,16 +72,18 @@ for item in items:
 	for i in range(3, dim):
 		item[i] = random.gauss(0., sigma_gen)
 
+# generate test
+
 with open("test.in", "w") as fin:
-	fin.write("{} {} {} {} {}\n".format(U, U * sessions_per_user, M, D * sessions_per_user, T))
+	fin.write("{} {} {} {} {}\n".format(U, S, M, D, T))
 	for _ in range(D):
+                # session may hold more than one item, because we mat retake (u, s)
 		u = random.randint(0, U - 1)
-                for s in xrange(sessions_per_user):
-                    m = random.randint(0, M - 1)
-                    noise_error = random.gauss(0., noise)
-                    sid = u * sessions_per_user + s
-                    r = np.inner(sessions[sid], items[m]) + noise_error 
-                    fin.write("{} {} {} {}\n" .format(u, sid, m, r))
+                s = random.randint(0, len(sessions[u]) - 1)
+                m = random.randint(0, M - 1)
+                noise_error = random.gauss(0., noise)
+                r = np.inner(sessions[u][s], items[m]) + noise_error 
+                fin.write("{} {} {} {}\n" .format(u, s, m, r))
 	with open("test.out", "w") as fout:
 		for _ in range(T):
 			u = random.randint(0, U - 1)
