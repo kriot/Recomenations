@@ -6,15 +6,29 @@
 #include "recommender_session_normal_around_user.hpp"
 
 
-// TODO: opt_parse
-void run_user_item_model(bool data_with_sessions = false)
+enum class SessionAdapter {
+	NoSessions,
+	IgnoreSessions,
+	IgnoreUsers
+};
+
+void run_user_item_model(SessionAdapter data_adapter = SessionAdapter::NoSessions)
 {
 	bool model_choosing = false;
 
 	long long k, U, M, D, T;
 	
 	Data dataset;
-	if (data_with_sessions) {
+	if (data_adapter == SessionAdapter::NoSessions) {
+		std::cin >> k >> U >> M >> D >> T;
+		for (int i = 0; i < D; ++i) {
+			int u, m;
+			double r;
+			std::cin >> u >> m >> r;
+			dataset.AddData(u, m, r);
+		}
+	}
+	else if (data_adapter == SessionAdapter::IgnoreSessions) {
 		int SessionsSize;
 		std::cin >> U >> SessionsSize >> M >> D >> T;
 		k = 10; // this is unused param
@@ -25,13 +39,16 @@ void run_user_item_model(bool data_with_sessions = false)
 			dataset.AddData(u, m, r);
 		}
 	}
-	else {
-		std::cin >> k >> U >> M >> D >> T;
+	else if (data_adapter == SessionAdapter::IgnoreUsers) {
+		int SessionsSize;
+		std::cin >> U >> SessionsSize >> M >> D >> T;
+		U = SessionsSize;
+		k = 10; // this is unused param
 		for (int i = 0; i < D; ++i) {
-			int u, m;
+			ID u, m, s;
 			double r;
-			std::cin >> u >> m >> r;
-			dataset.AddData(u, m, r);
+			std::cin >> u >> s >> m >> r;
+			dataset.AddData(s, m, r);
 		}
 	}
 
@@ -45,7 +62,7 @@ void run_user_item_model(bool data_with_sessions = false)
 			RecommenderConjugateGradient trainer(&recommender, &dataset
 					, 2000 /*timeup*/
 					, 0.001 /*lambda*/
-					, 0.1 /*regularization*/
+					, 0. //0.1 /*regularization*/
 					, 10000 * D /*max iterations*/);
 			trainer.Train();
 			double rmse = trainer.RMSE();
@@ -102,7 +119,7 @@ void run_user_session_item_model()
 	RecommenderSessionNormalAroundUser trainer(&recommender, &dataset
 		, 100 * 60 * 1000 /*timeup*/
 		, 0.0002 /*lambda*/
-		, 0.//.01 /*regularization*/
+		, .01 /*regularization*/
 		, 20);
 	trainer.Train();
 #ifdef DEBUG
@@ -130,7 +147,8 @@ int main(int argc, char** argv) {
     	("help", "Print help messages")
       	("usi_sr", "sessions round user (U, S, I)")
 		("ui", "trivial (U, I)")
-		("ui_s", "trivial (U, I), but parses (U, S, I)"); 
+		("ui_ui", "(U, S, I) -> (U, I) for trivial")
+		("ui_si", "(U, S, I) -> (S, I) for trivial"); 
  
     po::variables_map vm; 
     try 
@@ -161,8 +179,10 @@ int main(int argc, char** argv) {
 		run_user_session_item_model();
 	else if (vm.count("ui"))	
 		run_user_item_model();
-	else if (vm.count("ui_s"))
-		run_user_item_model(true);
+	else if (vm.count("ui_ui"))
+		run_user_item_model(SessionAdapter::IgnoreSessions);
+	else if (vm.count("ui_si"))
+		run_user_item_model(SessionAdapter::IgnoreUsers);
 	else
 		std::cerr << "Pass the alg you need!\n";
 }
