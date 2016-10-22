@@ -22,6 +22,7 @@ class RecommenderSessionNormalAroundUser: public RecommenderTrainer {
 	private:
 		inline double RMSE_partial(int offset); 
 		double MSE_sessions();
+		double UserSession_metric();
 	public:
 		std::chrono::milliseconds timeup;
 		long long N = 1000;
@@ -38,6 +39,7 @@ class RecommenderSessionNormalAroundUser: public RecommenderTrainer {
 		// ItemL ( 1, b_i,   1, ... )
 		inline void FixUser(UID uid); 
 		inline void FixItem(IID iid); 
+		inline void FixSession(ID session);
 		inline void FixAll(); 
 		void RandomizeData(); 
 };

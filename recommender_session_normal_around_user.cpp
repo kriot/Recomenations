@@ -28,11 +28,6 @@ void RecommenderSessionNormalAroundUser::Train() {
 //
 // Artcle of method: https://en.wikipedia.org/wiki/Nonlinear_conjugate_gradient_method
 //
-	RandomizeData();
-	EstimateMu();
-	FixAll();
-	double rmse = RMSE();
-	std::cerr << "First RMSE: " << rmse << "\n";
 	std::ofstream lambda_log("lambda.log");
 	std::ofstream rmse_log("rmse.log");
 	std::ofstream speed_log("speed.log");
@@ -54,9 +49,16 @@ void RecommenderSessionNormalAroundUser::Train() {
 	cv::Mat movie_delta_x_prev = cv::Mat::zeros(dim, M, CV_R);
 	cv::Mat u0 = session_delta_x_prev.clone();
 	cv::Mat m0 = movie_delta_x_prev.clone();
+
+	RandomizeData();
+	EstimateMu();
+	FixAll();
+	double rmse = RMSE();
+	std::cerr << "First RMSE: " << rmse << "\n";
+
 	for (int iteration = 0; iteration < N && std::chrono::system_clock::now() - beginning < timeup; ++iteration) {
 		std::cerr << "Iteration: " << iteration << "\n";
-		if (iteration % 10 == 0) {
+		if (iteration % 1 == 0) {
 			std::cerr << "Iteration: " << iteration << "\n";
 			rmse = RMSE();
 			std::cerr << "MSE: " << rmse << "\n";
@@ -117,7 +119,7 @@ void RecommenderSessionNormalAroundUser::Train() {
 			
 			//fit users
 			std::vector<int> n(U, 0);
-			recommender->Users = cv::Mat::zeros(S, dim, CV_R);
+			recommender->Users = cv::Mat::zeros(U, dim, CV_R);
 			for (const auto& d: data->data) {
 				ID u = d.uid;
 				ID s = d.session;
@@ -132,7 +134,8 @@ void RecommenderSessionNormalAroundUser::Train() {
 				recommender->Users.row(u) /= n[u];
 				n[u] = 1;
 			}
-			// std::cerr << "After user opt: " << MSE_sessions() << "\n";
+			std::cerr << "After user opt: " << MSE_sessions() << "\n";
+			std::cerr << "UserSession metric: " << UserSession_metric() << "\n";
 		} else { // # train m_id
 
 			// reset u0 after all iterations for uids
@@ -216,6 +219,31 @@ double RecommenderSessionNormalAroundUser::MSE_sessions() {
 	return sum / data->data.size();
 }
 
+double RecommenderSessionNormalAroundUser::UserSession_metric() {
+	double sum = 0;
+	std::map<std::pair<ID, ID>, int> user_session_counter;
+	std::map<std::pair<ID, ID>, double> user_session_aggregator;
+	for (const auto& d: data->data) {
+		ID u = d.uid;
+		ID s = d.session;
+		auto diff = sessions.row(s) - recommender->Users.row(u);
+		double error = diff.dot(diff);
+		if (user_session_aggregator.find(std::make_pair(u, s)) == user_session_aggregator.end())
+			user_session_aggregator[std::make_pair(u, s)] = 0.;
+		user_session_aggregator[std::make_pair(u, s)] += error;
+		if (user_session_counter.find(std::make_pair(u, s)) == user_session_counter.end())
+			user_session_counter[std::make_pair(u, s)] = 0;
+		user_session_counter[std::make_pair(u, s)] += 1;
+	}
+	for (const auto& us: user_session_counter) {
+		ID u = us.first.first;
+		ID s = us.first.second;
+		int c = us.second;
+		sum += user_session_aggregator[std::make_pair(u, s)] / c;	
+	}
+	return sum;
+}
+
 void RecommenderSessionNormalAroundUser::EstimateMu() {
 	double sum = 0;
 	for (const auto& d: data->data) {
@@ -232,6 +260,11 @@ inline void RecommenderSessionNormalAroundUser::FixUser(UID uid) {
 	recommender->Users.at<R>(uid, 1) = 1;
 }
 
+inline void RecommenderSessionNormalAroundUser::FixSession(ID session) {
+	sessions.at<R>(session, 0) = mu;
+	sessions.at<R>(session, 1) = 1;
+}
+
 inline void RecommenderSessionNormalAroundUser::FixItem(IID iid) {
 	recommender->Items.at<R>(0, iid) = 1.;
 	recommender->Items.at<R>(2, iid) = 1.;
@@ -242,6 +275,8 @@ inline void RecommenderSessionNormalAroundUser::FixAll() {
 		FixUser(i);
 	for (int i = 0; i < recommender->Items.cols; ++i)
 		FixItem(i);
+	for (int i = 0; i < sessions.rows; ++i)
+		FixSession(i);
 }
 
 void RecommenderSessionNormalAroundUser::RandomizeData() {
