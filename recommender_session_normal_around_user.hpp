@@ -21,6 +21,7 @@ class RecommenderSessionNormalAroundUser: public RecommenderTrainer {
 
 	private:
 		inline double RMSE_partial(int offset); 
+		double MSE_sessions();
 	public:
 		std::chrono::milliseconds timeup;
 		long long N = 1000;
@@ -29,6 +30,7 @@ class RecommenderSessionNormalAroundUser: public RecommenderTrainer {
 		double regularization_k;
 	private:
 		DataSession* data;
+		cv::Mat sessions;
 		double mu;
 	private:
 		void EstimateMu(); 

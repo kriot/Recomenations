@@ -1,3 +1,4 @@
+#include <boost/program_options.hpp>
 #include <iostream>
 #include "data.hpp"
 #include "recommender.hpp"
@@ -6,19 +7,32 @@
 
 
 // TODO: opt_parse
-void run_user_item_model()
+void run_user_item_model(bool data_with_sessions = false)
 {
 	bool model_choosing = false;
 
 	long long k, U, M, D, T;
-	std::cin >> k >> U >> M >> D >> T;
 	
 	Data dataset;
-	for (int i = 0; i < D; ++i) {
-		int u, m;
-		double r;
-		std::cin >> u >> m >> r;
-		dataset.AddData(u, m, r);
+	if (data_with_sessions) {
+		int SessionsSize;
+		std::cin >> U >> SessionsSize >> M >> D >> T;
+		k = 10; // this is unused param
+		for (int i = 0; i < D; ++i) {
+			int u, m, s;
+			double r;
+			std::cin >> u >> s >> m >> r;
+			dataset.AddData(u, m, r);
+		}
+	}
+	else {
+		std::cin >> k >> U >> M >> D >> T;
+		for (int i = 0; i < D; ++i) {
+			int u, m;
+			double r;
+			std::cin >> u >> m >> r;
+			dataset.AddData(u, m, r);
+		}
 	}
 
 	int optimal_size = 10; // Maximal size
@@ -88,7 +102,7 @@ void run_user_session_item_model()
 	RecommenderSessionNormalAroundUser trainer(&recommender, &dataset
 		, 100 * 60 * 1000 /*timeup*/
 		, 0.0002 /*lambda*/
-		, .01 /*regularization*/
+		, 0.//.01 /*regularization*/
 		, 20);
 	trainer.Train();
 #ifdef DEBUG
@@ -107,7 +121,48 @@ void run_user_session_item_model()
 	}
 }
 
-int main() {
-	// run_user_item_model();
-	run_user_session_item_model();
+// TODO: regularization in cmd params
+
+int main(int argc, char** argv) {
+	namespace po = boost::program_options; 
+    po::options_description desc("Options"); 
+    desc.add_options() 
+    	("help", "Print help messages")
+      	("usi_sr", "sessions round user (U, S, I)")
+		("ui", "trivial (U, I)")
+		("ui_s", "trivial (U, I), but parses (U, S, I)"); 
+ 
+    po::variables_map vm; 
+    try 
+    { 
+      po::store(po::parse_command_line(argc, argv, desc),  
+                vm); // can throw 
+ 
+      /** --help option 
+       */ 
+      if ( vm.count("help")  ) 
+      { 
+        std::cout << "Basic Command Line Parameter App" << std::endl 
+                  << desc << std::endl; 
+        return 0; 
+      } 
+ 
+      po::notify(vm); // throws on error, so do after help in case 
+                      // there are any problems 
+    } 
+    catch(po::error& e) 
+    { 
+      std::cerr << "ERROR: " << e.what() << std::endl << std::endl; 
+      std::cerr << desc << std::endl; 
+      return 1; 
+    } 
+
+	if (vm.count("usi_sr"))
+		run_user_session_item_model();
+	else if (vm.count("ui"))	
+		run_user_item_model();
+	else if (vm.count("ui_s"))
+		run_user_item_model(true);
+	else
+		std::cerr << "Pass the alg you need!\n";
 }

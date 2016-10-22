@@ -9,5 +9,5 @@ Recommender::Recommender(long long UsersSize, long long ItemsSize, long long Dim
 
 R Recommender::Predict(UID uid, IID iid)
 {
-	return cv::Mat(Users.row(uid) * Items.col(iid)).at<R>(0, 0);
+	return Users.row(uid).dot(Items.col(iid).t());
 }

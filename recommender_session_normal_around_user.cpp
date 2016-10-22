@@ -44,11 +44,11 @@ void RecommenderSessionNormalAroundUser::Train() {
 	const int dim = recommender->Dimension;
 	const int S = data->sessions;
 
-	int steps_per_iteration = 6;
+	int steps_per_iteration = 1;
 	bool disable_conjugate = false;
 
 	cv::Mat session_delta_x_prev = cv::Mat::zeros(S, dim, CV_R);
-	cv::Mat sessions = cv::Mat::zeros(S, dim, CV_R);
+	sessions = cv::Mat::zeros(S, dim, CV_R);
 	cv::randn(sessions, 0, 1);
 
 	cv::Mat movie_delta_x_prev = cv::Mat::zeros(dim, M, CV_R);
@@ -59,7 +59,9 @@ void RecommenderSessionNormalAroundUser::Train() {
 		if (iteration % 10 == 0) {
 			std::cerr << "Iteration: " << iteration << "\n";
 			rmse = RMSE();
-			std::cerr << "RMSE: " << rmse << "\n";
+			std::cerr << "MSE: " << rmse << "\n";
+			double mse_sessions = MSE_sessions();
+			std::cerr << "MSE sessions: " << mse_sessions << "\n";
 		}
 
 		if ((iteration / steps_per_iteration) % 2 == 0) { // # train s_id
@@ -67,14 +69,14 @@ void RecommenderSessionNormalAroundUser::Train() {
 			// reset m0 after all iterations for mids
 			m0 = cv::Mat::zeros(dim, M, CV_R);
 
-			cv::Mat session_delta_x = cv::Mat::zeros(U, dim, CV_R);
+			cv::Mat session_delta_x = cv::Mat::zeros(S, dim, CV_R);
 			// estimate gradient
 			for (const auto& d: data->data) {
-				ID u = d.uid;
+				// ID u = d.uid;
 				ID s = d.session;
 				ID m = d.iid;
 				double r = d.rating;
-				session_delta_x.row(u) += recommender->Items.col(m).t() * (r - sessions.row(s).dot(recommender->Items.col(m).t())) + regularization_k * (recommender->Users.row(u) + sessions.row(s));
+				session_delta_x.row(s) += recommender->Items.col(m).t() * (r - sessions.row(s).dot(recommender->Items.col(m).t())) + regularization_k * (recommender->Users.row(s) + sessions.row(s));
 			}
 			// reset
 			for(int s = 0; s < S; ++s) {
@@ -98,12 +100,12 @@ void RecommenderSessionNormalAroundUser::Train() {
 			double t_num = 0;
 			double t_den = 0;
 			for (const auto& d: data->data) {
-				int u = d.uid;
+				// int u = d.uid;
 				int m = d.iid;
 				ID s = d.session;
 				int r = d.rating;
-				t_num += cv::Mat((r - sessions.row(s).dot(recommender->Items.col(m).t())) * (u0.row(u) * recommender->Items.col(m))).at<R>(0, 0) + regularization_k * cv::Mat((recommender->Users.row(u) + sessions.row(s)) * (u0.row(u).t())).at<R>(0, 0);
-				t_den += std::pow(cv::Mat(u0.row(u) * recommender->Items.col(m)).at<R>(0, 0), 2) + regularization_k * cv::Mat(u0.row(u) * (u0.row(u).t())).at<R>(0, 0); 
+				t_num += cv::Mat((r - sessions.row(s).dot(recommender->Items.col(m).t())) * (u0.row(s) * recommender->Items.col(m))).at<R>(0, 0) + regularization_k * cv::Mat((recommender->Users.row(s) + sessions.row(s)) * (u0.row(s).t())).at<R>(0, 0);
+				t_den += std::pow(cv::Mat(u0.row(s) * recommender->Items.col(m)).at<R>(0, 0), 2) + regularization_k * cv::Mat(u0.row(s) * (u0.row(s).t())).at<R>(0, 0); 
 			}
 			double t = t_num / t_den;
 			
@@ -130,10 +132,11 @@ void RecommenderSessionNormalAroundUser::Train() {
 				recommender->Users.row(u) /= n[u];
 				n[u] = 1;
 			}
+			// std::cerr << "After user opt: " << MSE_sessions() << "\n";
 		} else { // # train m_id
 
 			// reset u0 after all iterations for uids
-			u0 = cv::Mat::zeros(U, dim, CV_R);
+			u0 = cv::Mat::zeros(S, dim, CV_R);
 			cv::Mat movie_delta_x = cv::Mat::zeros(dim, M, CV_R);
 			// estimate gradient
 			for (const auto& d: data->data) {
@@ -180,6 +183,7 @@ void RecommenderSessionNormalAroundUser::Train() {
 
 			// save prev
 			movie_delta_x_prev = movie_delta_x;
+			// std::cerr << "After item opt: " << MSE_sessions() << "\n";
 		}
 		// FixAll();
 		done_iterations = iteration + 1;
@@ -192,8 +196,21 @@ double RecommenderSessionNormalAroundUser::RMSE() {
 	for (const auto& d: data->data) {
 		int u = d.uid;
 		int m = d.iid;
-		int r = d.rating;
+		double r = d.rating;
 		double error = r - recommender->Predict(u, m);
+		sum += std::pow(error, 2);
+	}
+	return sum / data->data.size();
+}
+
+double RecommenderSessionNormalAroundUser::MSE_sessions() {
+	double sum = 0;
+	for (const auto& d: data->data) {
+		// int u = d.uid;
+		ID m = d.iid;
+		ID s = d.session;
+		double r = d.rating;
+		double error = r - sessions.row(s).dot(recommender->Items.col(m).t());
 		sum += std::pow(error, 2);
 	}
 	return sum / data->data.size();

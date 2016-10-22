@@ -2,7 +2,7 @@ CXX=g++
 #INCLUDEPATH=-I$(PROJECTPATH)/config_loader/ -I$(PROJECTPATH)/UbjsonCpp/include/ -I$(PROJECTPATH)
 #LIBRARYPATH=-L$(PROJECTPATH)/UbjsonCpp/src -L$(PROJECTPATH)/config_loader
 CXXFLAGS=--std=c++11 -c -g -D DEBUG -Wall -Wno-sign-compare $(INCLUDEPATH)
-LDFLAGS=-lopencv_core $(LIBRARYPATH) 
+LDFLAGS=-lopencv_core -lboost_program_options $(LIBRARYPATH) 
 OBJECTS=main.o conjugate_gradient_trainer.o data.o recommender.o recommender_trainer.o defines.o recommender_session_normal_around_user.o data_element.o
 EXECUTABLE=main
 
